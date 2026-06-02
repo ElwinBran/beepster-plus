@@ -8,6 +8,9 @@ let scales = {
     'blues-major': ['C', 'D', 'F', 'G', 'A']
 }
 
+let currentScaleIndex = 0
+let currentNotesLength = 5
+let currentRootNoteIndex = 0
 let currentScale = 'minor-pentatonic'
 let notes = scales[currentScale]
 let octaves = [1, 2, 3, 4, 5, 6]
@@ -42,13 +45,11 @@ let randomInstrument = () => {
 
 let randomLoop = () => {
     let loop = []
-    let noteId = Math.floor(Math.random() * notes.length)
+    let noteId = Math.floor(Math.random() * currentNotesLength)
     for (i = 0; i < loopLength; i++) {
         noteId += Math.floor(Math.random() * noteVariation * 2 - noteVariation)
-        if (noteId < 0) noteId = 0
-        if (noteId >= notes.length) noteId = notes.length - 1
-        let note = notes[noteId]
-        loop.push(note)
+        let noteIndex = fitNoteToScale(noteId, currentScaleIndex)
+        loop.push(noteAlwaysFlat(noteIndex, currentRootNoteIndex))
     }
     return loop
 }
