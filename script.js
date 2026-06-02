@@ -264,8 +264,7 @@ let updateScale = (newScale) => {
         else if (currentScale === 'blues-minor') currentScale = 'blues-major'
         else if (currentScale === 'blues-major') currentScale = 'minor-pentatonic'
     }
-
-    let notes = scales[currentScale]
+    notes = scales[currentScale]
     tracks.forEach(track => {
         track.loop = randomLoop()
     })
