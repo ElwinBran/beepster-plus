@@ -1,13 +1,8 @@
 let frequencyMapping = {};
 
-// 
-const DIATONIC_NOTE_SYMBOLS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-const CHROMATIC_WHOLE_TONE_INDICES = [0, 2, 4, 5, 7, 9, 11];
-
 function frequencyFromNote(note) {
     return frequencyMapping[note];
 }
-
 
 /*
 The MIT License (MIT)
@@ -40,20 +35,9 @@ function initializeFrequenies() {
             let keyNumber = step + (octave * 12);
             let floatFreq = parseFloat((440 * Math.pow(2, (keyNumber - 57) / 12)), 10);
             let resultFrequency = parseFloat(floatFreq.toFixed(2), 10);
-            if (CHROMATIC_WHOLE_TONE_INDICES.includes(step)) {
-                let diatonicNoteIndex = CHROMATIC_WHOLE_TONE_INDICES.indexOf(step);
-                let noteLetter = DIATONIC_NOTE_SYMBOLS[diatonicNoteIndex];
-                frequencyMapping[noteLetter + octave] = resultFrequency;
-            } else {
-                let lowerLetterIndex = CHROMATIC_WHOLE_TONE_INDICES.indexOf(step + 1);
-                let upperLetterIndex = CHROMATIC_WHOLE_TONE_INDICES.indexOf(step - 1);
-                let lowerLetter = DIATONIC_NOTE_SYMBOLS[lowerLetterIndex];
-                let upperLetter = DIATONIC_NOTE_SYMBOLS[upperLetterIndex];
-                let esNote = lowerLetter + 'b' + octave;
-                let isNote = upperLetter + '#' + octave;
-                frequencyMapping[esNote] = resultFrequency;
-                frequencyMapping[isNote] = resultFrequency;
-            }
+            noteBoth(step).forEach(baseSymbol => {
+                frequencyMapping[baseSymbol + octave] = resultFrequency;
+            });
         }
     }
 }
