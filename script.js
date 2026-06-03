@@ -71,15 +71,16 @@ let playTracks = () => {
                 if (loopId >= loopLength) {
                     loopId = 0
                     noteIds[i] = 0
-                    if (Math.random() < chanceForNewLoop * track.randomness) {
+                    if (!track.state.freezeState && 
+                            (Math.random() < chanceForNewLoop * track.randomness)) {
                         track.melody = randomLoop()
                     }
                 }
-                if (track.playing) {
+                if (track.state.playing) {
                     let note = track.melody[loopId]
                     let freq = frequencyFromNote(note + track.octave)
-                    let volume = track.volume / track.octave
-                    playNote(freq, track.timbre, track.envelope, track.division * 0.125, volume)
+                    let volume = track.state.volume / track.octave
+                    playNote(freq, track.state.timbre, track.envelope, track.division * 0.125, volume)
                 }
             }
             noteIds[i]++
@@ -177,19 +178,19 @@ let renderTrack = (track, trackId) => {
 
     let playCheckbox = document.createElement('input')
     playCheckbox.type = 'checkbox'
-    playCheckbox.checked = track.playing
+    playCheckbox.checked = track.state.playing
     playCheckbox.addEventListener('change', e => {
-        track.playing = e.target.checked
+        track.state.playing = e.target.checked
         updateShareUrl()
     })
     container.appendChild(playCheckbox)
 
     let instrumentButton = document.createElement('button')
     instrumentButton.className = 'instrument-button'
-    instrumentButton.innerHTML = renderInstrumentSVG(track.envelope, track.timbre)
+    instrumentButton.innerHTML = renderInstrumentSVG(track.envelope, track.state.timbre)
     instrumentButton.addEventListener('click', () => {
         track.envelope = randomEnvelope()
-        instrumentButton.innerHTML = renderInstrumentSVG(track.envelope, track.timbre)
+        instrumentButton.innerHTML = renderInstrumentSVG(track.envelope, track.state.timbre)
         updateShareUrl()
     })
     container.appendChild(instrumentButton)
@@ -197,7 +198,7 @@ let renderTrack = (track, trackId) => {
     let speedModifier = renderModifier('speed', track.division, BEATS, x => track.division = x)
     container.appendChild(speedModifier)
 
-    let volumeModifier = renderModifier('volume', track.volume, VOLUMES, x => track.volume = x)
+    let volumeModifier = renderModifier('volume', track.state.volume, VOLUMES, x => track.state.volume = x)
     container.appendChild(volumeModifier)
 
     let octaveModifier = renderModifier('pitch', track.octave, OCTAVES, x => track.octave = x)
@@ -235,7 +236,7 @@ let updateScale = (newScale) => {
     }
     notes = scales[currentScale]
     tracks.forEach(track => {
-        track.loop = randomLoop()
+        track.melody = randomLoop()
     })
 
     document.getElementById('scale-button').innerText = currentScale.replace('-', ' ') + ' scale'
@@ -256,12 +257,12 @@ let getUrlData = () => {
 
     url += tracks.map(track => {
         let data = 'T'
-        data += 'p' + (track.playing ? 1 : 0) + ','
+        data += 'p' + (track.state.playing ? 1 : 0) + ','
         data += 'o' + track.octave + ','
         data += 'b' + track.beat + ','
-        data += 'v' + Math.floor(track.volume * 10) + ','
+        data += 'v' + Math.floor(track.state.volume * 10) + ','
 
-        data += 'w' + track.timbre + ','
+        data += 'w' + track.state.timbre + ','
         data += 'a' + Math.floor(track.envelope.attack * 10000) + ','
         data += 'd' + Math.floor(track.envelope.decay * 10000) + ','
         data += 's' + Math.floor(track.envelope.sustain * 10000) + ','
@@ -315,14 +316,14 @@ let loadUrlData = (url) => {
             else if (partType === 'v') {
                 let volume = parseInt(part) / 10
                 if (!isNaN(volume) && VOLUMES.includes(volume)) {
-                    track.volume = volume
+                    track.state.volume = volume
                 }
             }
             else if (partType === 'w') {
-                if (part === '0') track.timbre = 0
-                else if (part === '1') track.timbre = 1
-                else if (part === '2') track.timbre = 2
-                else if (part === '3') track.timbre = 3
+                if (part === '0') track.state.timbre = 0
+                else if (part === '1') track.state.timbre = 1
+                else if (part === '2') track.state.timbre = 2
+                else if (part === '3') track.state.timbre = 3
             }
             else if (partType === 'a') {
                 let attack = parseInt(part) / 10000
@@ -360,7 +361,7 @@ window.onload = () => {
         AudioContext = window.AudioContext || window.webkitAudioContext
         audioCtx = new AudioContext()
         initializeFrequenies()
-        tracks = Array(4).fill(0).map(() => randomMelodyTrack(randomLoop))
+        tracks = Array(6).fill(0).map(() => randomMelodyTrack(randomLoop))
 
         let scaleButton = document.getElementById('scale-button')
         scaleButton.innerText = 'minor pentatonic scale'
@@ -370,6 +371,7 @@ window.onload = () => {
         updateShareUrl()
 
         renderTrackList()
+        playTracks()
         document.getElementById('start-button').className = 'hidden'
         document.getElementById('tracks').className = ''
         document.getElementById('scale-button').className = ''

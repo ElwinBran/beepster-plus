@@ -12,19 +12,36 @@ class ADSREnvelope {
     }
 }
 
-class MelodyTrack {
-
-    constructor(playing, timbre, envelope, octave, 
-            beatDivision, volume, melody, randomness, keepMelody) {
+class VoiceState {
+    constructor(playing, timbre, volume, freezeState) {
         this.playing = playing;
         this.timbre = timbre;
+        this.volume = volume;
+        this.freezeState = freezeState;
+    }
+}
+
+class MelodyTrack {
+
+    constructor(state, envelope, octave, beatDivision, melody, randomness) {
+        this.state = state;
         this.envelope = envelope;
         this.octave = octave;
         this.division = beatDivision;
-        this.volume = volume;
         this.melody = melody;
         this.randomness = randomness;
-        this.keepMelody = keepMelody;
+    }
+}
+
+// WIP!
+class PercussionTrack {
+
+    constructor(state, envelope, pattern, randomness) {
+        this.state = state;
+        this.envelope = envelope;
+        this.division = beatDivision;
+        this.pattern = pattern;
+        this.randomness = randomness;
     }
 }
 
@@ -42,13 +59,14 @@ function randomEnvelope() {
     return new ADSREnvelope(attack, decay, sustain, release);
 }
 
-function randomMelodyTrack(randomMelody, beats) {
+function randomMelodyTrack(randomMelody) {
     let envelope = randomEnvelope();
     let timbre = Math.floor(Math.random() * MELODY_TIMBRES);
     let octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
     let beatDivision = BEATS[Math.floor(Math.random() * BEATS.length)];
     let volume = VOLUMES[Math.floor(Math.random() * VOLUMES.length)];
     let melody = randomMelody();
-    return new MelodyTrack(true, timbre, envelope, octave, 
-        beatDivision, volume, melody, 1, false);
+    let state = new VoiceState(true, timbre, volume, false);
+    return new MelodyTrack(state, envelope, octave, 
+        beatDivision, melody, 1);
 }
