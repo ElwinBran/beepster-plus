@@ -7,6 +7,7 @@ let scales = {
     'blues-minor': ['C', 'Eb', 'F', 'Ab', 'Bb'],
     'blues-major': ['C', 'D', 'F', 'G', 'A']
 }
+const PATTERN_LENGTH = [2,3,4,5,6,7,8,9,10,11,12]
 
 let currentScaleIndex = 0
 let currentNotesLength = 5
@@ -92,7 +93,7 @@ let playTracks = () => {
     playNextNote()
 }
 
-let renderInstrumentSVG = (envelope, colorIndex) => {
+let renderInstrumentSVG = (envelope, color) => {
     let attackX = envelope.attack * 100
     let attackPt = `${attackX},0`
 
@@ -105,17 +106,90 @@ let renderInstrumentSVG = (envelope, colorIndex) => {
     let releaseX = 100 + envelope.release * 100
     let releasePt = `${releaseX},100`
 
-    let color = ''
-    if (colorIndex === 0) color = '#ff7f50'
-    if (colorIndex === 1) color = '#ffd700'
-    if (colorIndex === 2) color = '#00fa9a'
-    if (colorIndex === 3) color = '#40e0d0'
-
     return `
     <svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
         <polyline points="0,100 ${attackPt} ${decayPt} ${sustainPt} ${releasePt}" stroke="none" fill="${color}" />
     </svg>
     `
+}
+
+let melodyTimbreData = [
+    {
+        name: "Triangle",
+        icon: '^'
+    },
+    {
+        name: "Sawtooth",
+        icon: 'N'
+    },
+    {
+        name: "Square-50",
+        icon: '['
+    },
+    {
+        name: "Sine",
+        icon: 's'
+    },
+]
+
+let renderEnvelopeElement = (data, trackId, onAction) => {
+    let result = document.createElement('button')
+    result.className = 'envelope-button'
+    let color
+    let colorIndex = trackId % 4
+    if (colorIndex === 0) color = '#ff7f50'
+    if (colorIndex === 1) color = '#ffd700'
+    if (colorIndex === 2) color = '#00fa9a'
+    if (colorIndex === 3) color = '#40e0d0'
+    result.innerHTML = renderInstrumentSVG(data, color)
+    result.addEventListener('click', () => {
+        onAction()
+        result.innerHTML = renderInstrumentSVG(tracks[trackId].envelope, color)
+    })
+    return result
+}
+
+let renderTimbreElement = (trackReference, timbreIndex, timbres, onAction) => {
+    let result = document.createElement('button')
+    result.addEventListener('click', () => {
+        onAction()
+    })
+    return result
+}
+
+let renderSlider = (value, start, end, label, onChange) => {
+    let result = document.createElement('div')
+    let labelEl = document.createElement('div')
+    labelEl.innerText = label
+    result.appendChild(labelEl)
+    let slider = document.createElement('input')
+    slider.type = 'range'
+    slider.min = start
+    slider.max = end
+    slider.value = value
+    slider.addEventListener('change', e => 
+        onChange(e.target.value))
+    result.appendChild(slider)
+    return result
+}
+let renderCheckbox = (state, label, onChange) => {
+    let container = document.createElement('div')
+    let labelEl = document.createElement('div')
+    labelEl.innerText = label
+    container.appendChild(labelEl)
+    let checkBox = document.createElement('input')
+    checkBox.type = 'checkbox'
+    checkBox.checked = state
+    checkBox.addEventListener('change', onChange)
+    container.appendChild(checkBox)
+    return container
+}
+
+let renderButton = (text, onAction) => {
+    let button = document.createElement('button')
+    button.innerHTML = text
+    button.addEventListener('click', () => onAction())
+    return button
 }
 
 let renderDropdown = (selected, values, labels) => {
@@ -150,7 +224,6 @@ let renderModifier = (label, value, valueList, onChange) => {
         if (index < 0) index = 0
         onChange(valueList[index])
         valueEl.innerText = index + 1
-        updateShareUrl()
     })
     valueContainer.appendChild(prevButton)
 
@@ -165,63 +238,130 @@ let renderModifier = (label, value, valueList, onChange) => {
         if (index >= valueList.length) index = valueList.length - 1
         onChange(valueList[index])
         valueEl.innerText = index + 1
-        updateShareUrl()
     })
     valueContainer.appendChild(nextButton)
 
     return container
 }
 
-let renderTrack = (track, trackId) => {
+let renderModifierValueDisplay = (label, value, valueList, onChange) => {
     let container = document.createElement('div')
-    container.className = 'track'
+    container.className = 'modifier'
 
-    let playCheckbox = document.createElement('input')
-    playCheckbox.type = 'checkbox'
-    playCheckbox.checked = track.state.playing
-    playCheckbox.addEventListener('change', e => {
-        track.state.playing = e.target.checked
-        updateShareUrl()
+    let index = valueList.findIndex(x => x === value)
+
+    let labelEl = document.createElement('div')
+    labelEl.innerText = label
+    container.appendChild(labelEl)
+
+    let valueContainer = document.createElement('div')
+    container.appendChild(valueContainer)
+    
+    let prevButton = document.createElement('button')
+    prevButton.innerText = '↙'
+    prevButton.addEventListener('click', () => {
+        index--
+        if (index < 0) index = 0
+        onChange(valueList[index])
+        valueEl.innerText = valueList[index]
     })
-    container.appendChild(playCheckbox)
+    valueContainer.appendChild(prevButton)
 
-    let instrumentButton = document.createElement('button')
-    instrumentButton.className = 'instrument-button'
-    instrumentButton.innerHTML = renderInstrumentSVG(track.envelope, track.state.timbre)
-    instrumentButton.addEventListener('click', () => {
-        track.envelope = randomEnvelope()
-        instrumentButton.innerHTML = renderInstrumentSVG(track.envelope, track.state.timbre)
-        updateShareUrl()
+    let valueEl = document.createElement('div')
+    valueEl.innerHTML = index + 1
+    valueContainer.appendChild(valueEl)
+
+    let nextButton = document.createElement('button')
+    nextButton.innerText = '↗'
+    nextButton.addEventListener('click', () => {
+        index++
+        if (index >= valueList.length) index = valueList.length - 1
+        onChange(valueList[index])
+        valueEl.innerText = valueList[index]
     })
-    container.appendChild(instrumentButton)
-
-    let speedModifier = renderModifier('speed', track.division, BEATS, x => track.division = x)
-    container.appendChild(speedModifier)
-
-    let volumeModifier = renderModifier('volume', track.state.volume, VOLUMES, x => track.state.volume = x)
-    container.appendChild(volumeModifier)
-
-    let octaveModifier = renderModifier('pitch', track.octave, OCTAVES, x => track.octave = x)
-    container.appendChild(octaveModifier)
-
-    let randomButton = document.createElement('button')
-    randomButton.className = 'random-button'
-    randomButton.innerText = '⟳'
-    randomButton.addEventListener('click', () => {
-        tracks[trackId] = randomMelodyTrack(randomLoop)
-        renderTrackList()
-        updateShareUrl()
-    })
-    container.appendChild(randomButton)
+    valueContainer.appendChild(nextButton)
 
     return container
 }
 
-let renderTrackList = () => {
+const MELODY_TRACK_TEMPLATE = [
+    {
+        id: "playing", render: (track) => 
+            renderCheckbox(track.state.playing, "", 
+                e => track.state.playing = e.target.checked)
+    },
+    {
+        id: "wave", render: (track) => 
+            renderTimbreElement(track, track.state.timbre, melodyTimbreData, 
+                () => track.state.timbre = (track.state.timbre + 1) % melodyTimbreData.length)
+    },
+    {
+        id: "envelope", render: (track, trackId) => 
+            renderEnvelopeElement(track.envelope, trackId, 
+                () => track.envelope = randomEnvelope())
+    },
+    {
+        id: "speed", render: (track) => 
+            renderModifier("Speed", track.division, BEATS,
+                value => track.division = value)
+    },
+    {
+        id: "volume", render: (track) => 
+            renderModifier("Volume", track.state.volume, VOLUMES,
+                value => track.state.volume = value)
+    },
+    {
+        id: "octave", render: (track) => 
+            renderModifier("Octave", track.octave, OCTAVES,
+                value => track.octave = value)
+    },
+    {
+        id: "loop_length", render: (track) => 
+            renderModifierValueDisplay("Notes", track.melodyLength, PATTERN_LENGTH,
+                {} )
+    },
+    {
+        id: "randomness", render: (track) => 
+            renderSlider(track.randomness, RANDOM_START,RANDOM_END, "Randomness", 
+                () => {})
+    },
+    {
+        id: "freeze_loop", render: (track) => 
+            renderCheckbox(track.state.playing, "", 
+            e => track.state.freezeState = e.target.checked)
+    },
+    {
+        id: "new_loop", render: (track) => 
+            renderButton("%", {})
+    },
+    {
+        id: "randomize", render: (track) => 
+            renderButton("⟳", () => {
+                let newTrack = randomMelodyTrack(randomLoop)
+                track.state.timbre = newTrack.state.timbre
+                track.state.volume = newTrack.state.volume
+
+            })
+    }
+];
+
+
+function renderMelodyTrack(data, index) {
+    let result = document.createElement('div')
+    result.className = 'track'
+    MELODY_TRACK_TEMPLATE.forEach((elementTemplate) => {
+        result.appendChild(
+            elementTemplate.render(data, index)
+        )
+    })
+    return result
+}
+
+function renderTracks(melodyTracks) {
     let trackList = document.getElementById('tracks')
     trackList.innerHTML = ''
-    tracks.forEach((track, trackId) => {
-        let trackEl = renderTrack(track, trackId)
+    melodyTracks.forEach((track, trackId) => {
+        let trackEl = renderMelodyTrack(track, trackId)
         trackList.appendChild(trackEl)
     })
 }
@@ -248,113 +388,6 @@ let updateShareUrl = () => {
     shareLink.href = getUrlData()
 }
 
-let getUrlData = () => {
-    // let baseUrlEnd = window.location.href.indexOf('?')
-    // let url = window.location.href.slice(0, baseUrlEnd)
-    url = 'https://zenzoa.github.io/beepster/?beeps='
-
-    url += 'S' + Object.keys(scales).indexOf(currentScale) + '-'
-
-    url += tracks.map(track => {
-        let data = 'T'
-        data += 'p' + (track.state.playing ? 1 : 0) + ','
-        data += 'o' + track.octave + ','
-        data += 'b' + track.beat + ','
-        data += 'v' + Math.floor(track.state.volume * 10) + ','
-
-        data += 'w' + track.state.timbre + ','
-        data += 'a' + Math.floor(track.envelope.attack * 10000) + ','
-        data += 'd' + Math.floor(track.envelope.decay * 10000) + ','
-        data += 's' + Math.floor(track.envelope.sustain * 10000) + ','
-        data += 'r' + Math.floor(track.envelope.release * 10000)
-        
-        return data
-    }).join('-')
-
-    return url
-}
-
-let loadUrlData = (url) => {
-    dataStarts = url.indexOf('?beeps=')
-    if (dataStarts < 0) return
-
-    url = url.slice(dataStarts + 7)
-    let urlParts = url.split('-')
-    tracks = []
-    urlParts.forEach(data => {
-        if (data[0] === 'S') {
-            let scaleList = Object.keys(scales)
-            let scaleIndex = parseInt(data.slice(1))
-            if (scaleIndex >= 0 && scaleIndex < scaleList.length) {
-                currentScale = scaleList[scaleIndex]
-                updateScale(currentScale)
-            }
-            return
-        }
-        let track = randomMelodyTrack(randomLoop)
-
-        data = data.slice(1)
-        let parts = data.split(',')
-        parts.forEach(part => {
-            let partType = part[0]
-            part = part.slice(1)
-            if (partType === 'p') {
-                track.playing = part !== '0'
-            }
-            else if (partType === 'o') {
-                let octave = parseInt(part)
-                if (!isNaN(octave) && OCTAVES.includes(octave)) {
-                    track.octave = octave
-                }
-            }
-            else if (partType === 'b') {
-                let beat = parseInt(part)
-                if (!isNaN(beat) && BEATS.includes(beat)) {
-                    track.division = beat
-                }
-            }
-            else if (partType === 'v') {
-                let volume = parseInt(part) / 10
-                if (!isNaN(volume) && VOLUMES.includes(volume)) {
-                    track.state.volume = volume
-                }
-            }
-            else if (partType === 'w') {
-                if (part === '0') track.state.timbre = 0
-                else if (part === '1') track.state.timbre = 1
-                else if (part === '2') track.state.timbre = 2
-                else if (part === '3') track.state.timbre = 3
-            }
-            else if (partType === 'a') {
-                let attack = parseInt(part) / 10000
-                if (!isNaN(attack) && attack >= 0 && attack < 1) {
-                    track.envelope.attack = attack
-                }
-            }
-            else if (partType === 'd') {
-                let decay = parseInt(part) / 10000
-                if (!isNaN(decay) && decay >= 0 && decay < 1) {
-                    track.envelope.decay = decay
-                }
-            }
-            else if (partType === 's') {
-                let sustain = parseInt(part) / 10000
-                if (!isNaN(sustain) && sustain >= 0 && sustain < 1) {
-                    track.envelope.sustain = sustain
-                }
-            }
-            else if (partType === 'r') {
-                let release = parseInt(part) / 10000
-                if (!isNaN(release) && release >= 0 && release < 2) {
-                    track.envelope.release = release
-                }
-            }
-        })
-
-        tracks.push(track)
-    })
-}
-
 window.onload = () => {
     let startButton = document.getElementById('start-button')
     startButton.addEventListener('click', () => {
@@ -367,10 +400,8 @@ window.onload = () => {
         scaleButton.innerText = 'minor pentatonic scale'
         scaleButton.addEventListener('click', updateScale)
 
-        loadUrlData(window.location.href)
-        updateShareUrl()
 
-        renderTrackList()
+        renderTracks(tracks)
         playTracks()
         document.getElementById('start-button').className = 'hidden'
         document.getElementById('tracks').className = ''

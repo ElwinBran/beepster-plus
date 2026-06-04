@@ -2,6 +2,8 @@ const MELODY_TIMBRES = 4;
 const OCTAVES = [1, 2, 3, 4, 5, 6];
 const VOLUMES = [0.1, 0.2, 0.4, 0.6, 0.8, 1];
 const BEATS = [16, 8, 4, 2, 1];
+const RANDOM_START = 0;
+const RANDOM_END = 1;
 
 class ADSREnvelope {
     constructor(attack, decay, sustain, release) {
@@ -23,11 +25,12 @@ class VoiceState {
 
 class MelodyTrack {
 
-    constructor(state, envelope, octave, beatDivision, melody, randomness) {
+    constructor(state, envelope, octave, beatDivision, melodyLength, melody, randomness) {
         this.state = state;
         this.envelope = envelope;
         this.octave = octave;
         this.division = beatDivision;
+        this.melodyLength = melodyLength;
         this.melody = melody;
         this.randomness = randomness;
     }
@@ -68,5 +71,5 @@ function randomMelodyTrack(randomMelody) {
     let melody = randomMelody();
     let state = new VoiceState(true, timbre, volume, false);
     return new MelodyTrack(state, envelope, octave, 
-        beatDivision, melody, 1);
+        beatDivision, 8, melody, 1);
 }
