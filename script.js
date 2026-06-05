@@ -268,7 +268,7 @@ let renderModifierValueDisplay = (label, value, valueList, onChange) => {
     valueContainer.appendChild(prevButton)
 
     let valueEl = document.createElement('div')
-    valueEl.innerHTML = index + 1
+    valueEl.innerHTML = valueList[index]
     valueContainer.appendChild(valueEl)
 
     let nextButton = document.createElement('button')
@@ -394,7 +394,8 @@ window.onload = () => {
         AudioContext = window.AudioContext || window.webkitAudioContext
         audioCtx = new AudioContext()
         initializeFrequenies()
-        tracks = Array(6).fill(0).map(() => randomMelodyTrack(randomLoop))
+        let numberOfTracks = parseInt(document.getElementById('melody-counter').value)
+        tracks = Array(numberOfTracks).fill(0).map(() => randomMelodyTrack(randomLoop))
 
         let scaleButton = document.getElementById('scale-button')
         scaleButton.innerText = 'minor pentatonic scale'
@@ -403,8 +404,7 @@ window.onload = () => {
 
         renderTracks(tracks)
         playTracks()
-        document.getElementById('start-button').className = 'hidden'
-        document.getElementById('tracks').className = ''
-        document.getElementById('scale-button').className = ''
+        document.getElementById('start-screen').className = 'hidden'
+        document.getElementById('play-screen').className = ''
     })
 }

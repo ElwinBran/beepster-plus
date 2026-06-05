@@ -17,9 +17,19 @@
             <h1>⧞ beepster</h1>
         </header>
         <main>
-            <button id="start-button">let's get started!</button>
-            <div id="tracks" class="hidden"></div>
-            <button id="scale-button" class="hidden"></button>
+            <div id="start-screen">
+                <div>
+                    <label for="melody-counter">Number of melody tracks:</label>
+                    <input type="number" id="melody-counter" name="quantity" min="0" value="6">
+                </div>
+                <button id="start-button">let's get started!</button>
+            </div>
+            <div id="play-screen" class="hidden">
+                <div id="tracks"></div>
+                <div id="setting-panel" >
+                    <button id="scale-button"></button>
+                </div>
+            </div>
         </main>
         <footer>
             <a href="https://zenzoa.com" target="_blank">sg 2019</a> |
