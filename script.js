@@ -151,8 +151,10 @@ let renderEnvelopeElement = (data, trackId, onAction) => {
 
 let renderTimbreElement = (trackReference, timbreIndex, timbres, onAction) => {
     let result = document.createElement('button')
+    result.textContent = timbres[timbreIndex].icon
     result.addEventListener('click', () => {
         onAction()
+        result.textContent = timbres[trackReference.state.timbre].icon
     })
     return result
 }
