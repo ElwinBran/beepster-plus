@@ -62,14 +62,13 @@ function randomEnvelope() {
     return new ADSREnvelope(attack, decay, sustain, release);
 }
 
-function randomMelodyTrack(randomMelody) {
+function randomMelodyTrack(timbre, length, randomness, randomMelody) {
     let envelope = randomEnvelope();
-    let timbre = Math.floor(Math.random() * MELODY_TIMBRES);
     let octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
     let beatDivision = BEATS[Math.floor(Math.random() * BEATS.length)];
     let volume = VOLUMES[Math.floor(Math.random() * VOLUMES.length)];
     let melody = randomMelody();
-    let state = new VoiceState(true, timbre, volume, false);
+    let state = new VoiceState(false, timbre, volume, false);
     return new MelodyTrack(state, envelope, octave, 
-        beatDivision, 8, melody, 1);
+        beatDivision, length, melody, randomness);
 }

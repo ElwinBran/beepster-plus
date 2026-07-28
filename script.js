@@ -7,7 +7,8 @@ let scales = {
     'blues-minor': ['C', 'Eb', 'F', 'Ab', 'Bb'],
     'blues-major': ['C', 'D', 'F', 'G', 'A']
 }
-const PATTERN_LENGTH = [2,3,4,5,6,7,8,9,10,11,12]
+
+const PATTERN_LENGTH = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
 let currentScaleIndex = 0
 let currentNotesLength = 5
@@ -25,7 +26,7 @@ let tracks = []
 let randomLoop = () => {
     let loop = []
     let noteId = Math.floor(Math.random() * currentNotesLength)
-    for (i = 0; i < loopLength; i++) {
+    for (i = 0; i < PATTERN_LENGTH[PATTERN_LENGTH.length - 1]; i++) {
         noteId += Math.floor(Math.random() * noteVariation * 2 - noteVariation)
         let noteIndex = fitNoteToScale(noteId, currentScaleIndex)
         loop.push(noteAlwaysFlat(noteIndex, currentRootNoteIndex))
@@ -69,7 +70,7 @@ let playTracks = () => {
         tracks.forEach((track, i) => {
             if (noteIds[i] % track.division === 0) {
                 let loopId = Math.floor(noteIds[i] / track.division)
-                if (loopId >= loopLength) {
+                if (loopId >= track.melodyLength) {
                     loopId = 0
                     noteIds[i] = 0
                     if (!track.state.freezeState && 
@@ -160,14 +161,16 @@ let renderTimbreElement = (trackReference, timbreIndex, timbres, onAction) => {
 }
 
 let renderSlider = (value, start, end, label, onChange) => {
+let renderSlider = (value, sliderSettings, label, onChange) => {
     let result = document.createElement('div')
     let labelEl = document.createElement('div')
     labelEl.innerText = label
     result.appendChild(labelEl)
     let slider = document.createElement('input')
     slider.type = 'range'
-    slider.min = start
-    slider.max = end
+    slider.min = sliderSettings.min
+    slider.max = sliderSettings.max
+    slider.step = sliderSettings.step
     slider.value = value
     slider.addEventListener('change', e => 
         onChange(e.target.value))
@@ -320,7 +323,7 @@ const MELODY_TRACK_TEMPLATE = [
     {
         id: "loop_length", render: (track) => 
             renderModifierValueDisplay("Notes", track.melodyLength, PATTERN_LENGTH,
-                {} )
+            value => track.melodyLength = value)
     },
     {
         id: "randomness", render: (track) => 
@@ -342,7 +345,14 @@ const MELODY_TRACK_TEMPLATE = [
                 let newTrack = randomMelodyTrack(randomLoop)
                 track.state.timbre = newTrack.state.timbre
                 track.state.volume = newTrack.state.volume
-
+                track.state.playing = newTrack.state.playing
+                track.state.freezeState = newTrack.state.freezeState
+                track.envelope = newTrack.envelope
+                track.octave = newTrack.octave
+                track.division = newTrack.division
+                track.melodyLength = newTrack.melodyLength
+                track.melody = newTrack.melody
+                track.randomness = newTrack.randomness
             })
     }
 ];
@@ -397,7 +407,12 @@ window.onload = () => {
         audioCtx = new AudioContext()
         initializeFrequenies()
         let numberOfTracks = parseInt(document.getElementById('melody-counter').value)
-        tracks = Array(numberOfTracks).fill(0).map(() => randomMelodyTrack(randomLoop))
+        tracks = Array(numberOfTracks).fill(0).map(() => randomMelodyTrack(
+            Math.floor(Math.random() * melodyTimbreData.length),
+            8,
+            0.5,
+            randomLoop
+        ))
 
         let scaleButton = document.getElementById('scale-button')
         scaleButton.innerText = 'minor pentatonic scale'
