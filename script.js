@@ -160,7 +160,6 @@ let renderTimbreElement = (trackReference, timbreIndex, timbres, onAction) => {
     return result
 }
 
-let renderSlider = (value, start, end, label, onChange) => {
 let renderSlider = (value, sliderSettings, label, onChange) => {
     let result = document.createElement('div')
     let labelEl = document.createElement('div')
@@ -193,7 +192,7 @@ let renderCheckbox = (state, label, onChange) => {
 let renderButton = (text, onAction) => {
     let button = document.createElement('button')
     button.innerHTML = text
-    button.addEventListener('click', () => onAction())
+    button.addEventListener('click', onAction)
     return button
 }
 
@@ -327,8 +326,9 @@ const MELODY_TRACK_TEMPLATE = [
     },
     {
         id: "randomness", render: (track) => 
-            renderSlider(track.randomness, RANDOM_START,RANDOM_END, "Randomness", 
-                () => {})
+            renderSlider(track.randomness, 
+                {min: RANDOM_START, max: RANDOM_END, step: 0.01},
+                 "Randomness", () => {})
     },
     {
         id: "freeze_loop", render: (track) => 

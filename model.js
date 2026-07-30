@@ -1,4 +1,3 @@
-const MELODY_TIMBRES = 4;
 const OCTAVES = [1, 2, 3, 4, 5, 6];
 const VOLUMES = [0.1, 0.2, 0.4, 0.6, 0.8, 1];
 const BEATS = [16, 8, 4, 2, 1];
