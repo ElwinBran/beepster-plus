@@ -328,7 +328,8 @@ const MELODY_TRACK_TEMPLATE = [
         id: "randomness", render: (track) => 
             renderSlider(track.randomness, 
                 {min: RANDOM_START, max: RANDOM_END, step: 0.01},
-                 "Randomness", () => {})
+                "Randomness", 
+                (newValue) => track.randomness = newValue)
     },
     {
         id: "freeze_loop", render: (track) => 
