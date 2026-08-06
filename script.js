@@ -16,6 +16,7 @@ let currentRootNoteIndex = 0
 let currentScale = 'minor-pentatonic'
 let notes = scales[currentScale]
 let defaultTimbres = ['triangle', 'sawtooth', 'square', 'sine']
+let melodyTimbreData = []
 
 let loopLength = 8
 let noteVariation = 2
@@ -37,8 +38,7 @@ let randomLoop = () => {
 let playNote = (freq, timbre, envelope, noteLength, volume) => {
     let t = audioCtx.currentTime
 
-    let osc = audioCtx.createOscillator()
-    osc.type = defaultTimbres[timbre]
+    let osc = melodyTimbreData[timbre].oscillator(audioCtx)
     osc.frequency.value = freq
 
     let env = audioCtx.createGain()
@@ -114,24 +114,6 @@ let renderInstrumentSVG = (envelope, color) => {
     `
 }
 
-let melodyTimbreData = [
-    {
-        name: "Triangle",
-        icon: '^'
-    },
-    {
-        name: "Sawtooth",
-        icon: 'N'
-    },
-    {
-        name: "Square-50",
-        icon: '['
-    },
-    {
-        name: "Sine",
-        icon: 's'
-    },
-]
 
 let renderEnvelopeElement = (data, trackId, onAction) => {
     let result = document.createElement('button')
@@ -346,8 +328,6 @@ const MELODY_TRACK_TEMPLATE = [
                 let newTrack = randomMelodyTrack(randomLoop)
                 track.state.timbre = newTrack.state.timbre
                 track.state.volume = newTrack.state.volume
-                track.state.playing = newTrack.state.playing
-                track.state.freezeState = newTrack.state.freezeState
                 track.envelope = newTrack.envelope
                 track.octave = newTrack.octave
                 track.division = newTrack.division
@@ -407,6 +387,35 @@ window.onload = () => {
         AudioContext = window.AudioContext || window.webkitAudioContext
         audioCtx = new AudioContext()
         initializeFrequenies()
+        initializeOscillatorPatterns(audioCtx)
+        melodyTimbreData.push({
+            name: "Triangle", icon: '^',
+            oscillator: triangleOscillator
+        });
+        melodyTimbreData.push({
+            name: "Sawtooth", icon: 'N',
+            oscillator: sawtoothOscillator
+        });
+        melodyTimbreData.push({
+            name: "Square-50", icon: '[',
+            oscillator: square50Oscillator
+        });
+        melodyTimbreData.push({
+            name: "Sine", icon: 's',
+            oscillator: sineOscillator
+        });
+        melodyTimbreData.push({
+            name: "Square-25", icon: 'H',
+            oscillator: square25Oscillator
+        });
+        melodyTimbreData.push({
+            name: "Square-12.5", icon: '|',
+            oscillator: square12Oscillator
+        });
+        melodyTimbreData.push({
+            name: "Capped sine", icon: 'b',
+            oscillator: cappedSineOscillator
+        });
         let numberOfTracks = parseInt(document.getElementById('melody-counter').value)
         tracks = Array(numberOfTracks).fill(0).map(() => randomMelodyTrack(
             Math.floor(Math.random() * melodyTimbreData.length),
