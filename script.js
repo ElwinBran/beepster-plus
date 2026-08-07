@@ -376,6 +376,13 @@ let updateScale = (newScale) => {
     updateShareUrl()
 }
 
+function makeScaleHandler(scales, scaleDisplayUpdate) {
+    return () => {
+        currentScaleIndex = (currentScaleIndex + 1) % scales.length;
+
+        scaleDisplayUpdate(scales[currentScaleIndex].name);
+    };
+}
 let updateShareUrl = () => {
     let shareLink = document.getElementById('share')
     shareLink.href = getUrlData()
@@ -426,7 +433,11 @@ window.onload = () => {
 
         let scaleButton = document.getElementById('scale-button')
         scaleButton.innerText = 'minor pentatonic scale'
-        scaleButton.addEventListener('click', updateScale)
+        scaleButton.addEventListener('click', makeScaleHandler(
+            HEPTATONIC_SCALE, (text) => {
+                scaleButton.innerText = text
+            }
+        ))
 
 
         renderTracks(tracks)
