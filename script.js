@@ -396,6 +396,10 @@ window.onload = () => {
         initializeFrequenies()
         initializeOscillatorPatterns(audioCtx)
         melodyTimbreData.push({
+            name: "Sine", icon: 's',
+            oscillator: sineOscillator
+        });
+        melodyTimbreData.push({
             name: "Triangle", icon: '^',
             oscillator: triangleOscillator
         });
@@ -408,10 +412,6 @@ window.onload = () => {
             oscillator: square50Oscillator
         });
         melodyTimbreData.push({
-            name: "Sine", icon: 's',
-            oscillator: sineOscillator
-        });
-        melodyTimbreData.push({
             name: "Square-25", icon: 'H',
             oscillator: square25Oscillator
         });
@@ -422,6 +422,10 @@ window.onload = () => {
         melodyTimbreData.push({
             name: "Capped sine", icon: 'b',
             oscillator: cappedSineOscillator
+        });
+        melodyTimbreData.push({
+            name: "Folded sine", icon: '{',
+            oscillator: foldedSineOscillator
         });
         let numberOfTracks = parseInt(document.getElementById('melody-counter').value)
         tracks = Array(numberOfTracks).fill(0).map(() => randomMelodyTrack(

@@ -1,9 +1,10 @@
-let squareWave12, squareWave25, cappedSineWave;
+let squareWave12, squareWave25, cappedSineWave, foldedSineWave;
 
 function initializeOscillatorPatterns(audioContext) {
     squareWave12 = periodicSquareDutyWave(audioContext, 12.5 / 100);
     squareWave25 = periodicSquareDutyWave(audioContext, 25 / 100);
     cappedSineWave = wavetableToPeriodicWave(audioContext, asymmetricCappedSineWavetable());
+    foldedSineWave = wavetableToPeriodicWave(audioContext, sineFoldWavetable(30));
 }
 
 function sineOscillator(audioContext) {
@@ -37,6 +38,12 @@ function square12Oscillator(audioContext) {
 function cappedSineOscillator(audioContext) {
     return new OscillatorNode(audioContext, {
         type: "custom", periodicWave: cappedSineWave
+    });
+}
+
+function foldedSineOscillator(audioContext) {
+    return new OscillatorNode(audioContext, {
+        type: "custom", periodicWave: foldedSineWave
     });
 }
 
@@ -97,6 +104,15 @@ function asymmetricCappedSineWavetable(length = 2048) {
         let phaseCorrectedSine = Math.sin((2 * Math.PI * i) / length - phaseCorrection);
         let clippedSine = Math.min(1, phaseCorrectedSine * 0.5 + 1);
         table[i] = clippedSine * 4 - 3; //rescale and center on zero
+    }
+    return table;
+}
+
+function sineFoldWavetable(foldFactor, length = 2048) {
+    const table = new Float32Array(length);
+    for (let i = 0; i < length; i++) {
+        let sineSample = Math.sin((2 * Math.PI * i) / length);
+        table[i] = 1 - Math.abs((sineSample * foldFactor + 3) % 4)
     }
     return table;
 }
