@@ -27,6 +27,7 @@ const HEPTATONIC_SCALE = [
         indices: [2, 5, 7, 9]
     },
     {
+        //Hirajōshi
         name: "Kumoijoshi",
         steps: [],
         indices: [2, 3, 7, 8] //4

@@ -47,6 +47,8 @@ class PercussionTrack {
     }
 }
 
+// Drone track?
+
 function randomEnvelope() {
     let attack, decay;
     if (Math.random() >= 0.5) {

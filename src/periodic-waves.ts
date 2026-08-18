@@ -5,6 +5,7 @@ function initializeOscillatorPatterns(audioContext) {
     squareWave25 = periodicSquareDutyWave(audioContext, 25 / 100);
     cappedSineWave = wavetableToPeriodicWave(audioContext, asymmetricCappedSineWavetable());
     foldedSineWave = wavetableToPeriodicWave(audioContext, sineFoldWavetable(30));
+    // I think we can just make another generated wavetable for foldedsine, its not that hard, look at PureData
 }
 
 function sineOscillator(audioContext) {
