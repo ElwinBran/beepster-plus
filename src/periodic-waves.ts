@@ -1,54 +1,62 @@
-let squareWave12, squareWave25, cappedSineWave, foldedSineWave;
 
-function initializeOscillatorPatterns(audioContext) {
-    squareWave12 = periodicSquareDutyWave(audioContext, 12.5 / 100);
-    squareWave25 = periodicSquareDutyWave(audioContext, 25 / 100);
-    cappedSineWave = wavetableToPeriodicWave(audioContext, asymmetricCappedSineWavetable());
-    foldedSineWave = wavetableToPeriodicWave(audioContext, sineFoldWavetable(30));
-    // I think we can just make another generated wavetable for foldedsine, its not that hard, look at PureData
+export class PeriodicWaveModule {
+
+    #squareWave12: PeriodicWave;
+    #squareWave25: PeriodicWave;
+    #cappedSineWave: PeriodicWave;
+    #foldedSineWave: PeriodicWave;
+
+    constructor(audioContext: AudioContext) {
+        this.#squareWave12 = periodicSquareDutyWave(audioContext, 12.5 / 100);
+        this.#squareWave25 = periodicSquareDutyWave(audioContext, 25 / 100);
+        this.#cappedSineWave = wavetableToPeriodicWave(audioContext, asymmetricCappedSineWavetable());
+        this.#foldedSineWave = wavetableToPeriodicWave(audioContext, sineFoldWavetable(30));
+    }
+
+    sineOscillator(audioContext: AudioContext) {
+        return new OscillatorNode(audioContext, {type: "sine"});
+    }
+
+    triangleOscillator(audioContext: AudioContext) {
+        return new OscillatorNode(audioContext, {type: "triangle"});
+    }
+
+    sawtoothOscillator(audioContext: AudioContext) {
+        return new OscillatorNode(audioContext, {type: "sawtooth"});
+    }
+
+    square50Oscillator(audioContext: AudioContext) {
+        return new OscillatorNode(audioContext, {type: "square"});
+    }
+
+    square25Oscillator(audioContext: AudioContext) {
+        return new OscillatorNode(audioContext, {
+            type: "custom", periodicWave: this.#squareWave25
+        });
+    }
+
+    square12Oscillator(audioContext: AudioContext) {
+        return new OscillatorNode(audioContext, {
+            type: "custom", periodicWave: this.#squareWave12
+        });
+    }
+
+    cappedSineOscillator(audioContext: AudioContext) {
+        return new OscillatorNode(audioContext, {
+            type: "custom", periodicWave: this.#cappedSineWave
+        });
+    }
+
+    foldedSineOscillator(audioContext: AudioContext) {
+        return new OscillatorNode(audioContext, {
+            type: "custom", periodicWave: this.#foldedSineWave
+        });
+    }
 }
 
-function sineOscillator(audioContext) {
-    return new OscillatorNode(audioContext, {type: "sine"});
-}
 
-function triangleOscillator(audioContext) {
-    return new OscillatorNode(audioContext, {type: "triangle"});
-}
 
-function sawtoothOscillator(audioContext) {
-    return new OscillatorNode(audioContext, {type: "sawtooth"});
-}
-
-function square50Oscillator(audioContext) {
-    return new OscillatorNode(audioContext, {type: "square"});
-}
-
-function square25Oscillator(audioContext) {
-    return new OscillatorNode(audioContext, {
-        type: "custom", periodicWave: squareWave25
-    });
-}
-
-function square12Oscillator(audioContext) {
-    return new OscillatorNode(audioContext, {
-        type: "custom", periodicWave: squareWave12
-    });
-}
-
-function cappedSineOscillator(audioContext) {
-    return new OscillatorNode(audioContext, {
-        type: "custom", periodicWave: cappedSineWave
-    });
-}
-
-function foldedSineOscillator(audioContext) {
-    return new OscillatorNode(audioContext, {
-        type: "custom", periodicWave: foldedSineWave
-    });
-}
-
-function periodicSquareDutyWave(audioContext, duty) {
+function periodicSquareDutyWave(audioContext: AudioContext, duty: number) {
     const numHarmonics = 100;
     let real = new Float32Array(numHarmonics);
     let imaginary = new Float32Array(numHarmonics);
@@ -68,7 +76,7 @@ function periodicSquareDutyWave(audioContext, duty) {
  * @param {boolean} disableNormalization - Whether to disable normalization (default: false)
  * @returns {PeriodicWave} - The created PeriodicWave
  */
-function wavetableToPeriodicWave(audioContext, wavetable, disableNormalization = false) {    
+function wavetableToPeriodicWave(audioContext: AudioContext, wavetable: Float32Array, disableNormalization = false) {    
     const samples = wavetable instanceof Float32Array ? 
         wavetable : new Float32Array(wavetable);
     let numSamples = samples.length;
@@ -109,7 +117,7 @@ function asymmetricCappedSineWavetable(length = 2048) {
     return table;
 }
 
-function sineFoldWavetable(foldFactor, length = 2048) {
+function sineFoldWavetable(foldFactor: number, length = 2048) {
     const table = new Float32Array(length);
     for (let i = 0; i < length; i++) {
         let sineSample = Math.sin((2 * Math.PI * i) / length);

@@ -1,364 +1,17 @@
-let AudioContext, audioCtx
- 
-let scales = {
-    'minor-pentatonic': ['C', 'Eb', 'F', 'G', 'Bb'],
-    'major-pentatonic': ['C', 'D', 'E', 'G', 'A'],
-    'suspended': ['C', 'D', 'F', 'G', 'Bb'],
-    'blues-minor': ['C', 'Eb', 'F', 'Ab', 'Bb'],
-    'blues-major': ['C', 'D', 'F', 'G', 'A']
-}
-
-const PATTERN_LENGTH = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-
-let currentScaleIndex = 0
-let currentNotesLength = 5
-let currentRootNoteIndex = 0
-let currentScale = 'minor-pentatonic'
-let notes = scales[currentScale]
-let defaultTimbres = ['triangle', 'sawtooth', 'square', 'sine']
-let melodyTimbreData = []
-
-let loopLength = 8
-let noteVariation = 2
-let chanceForNewLoop = 0.1
-
-let tracks = []
-
-let randomLoop = () => {
-    let loop = []
-    let noteId = Math.floor(Math.random() * currentNotesLength)
-    for (i = 0; i < PATTERN_LENGTH[PATTERN_LENGTH.length - 1]; i++) {
-        noteId += Math.floor(Math.random() * noteVariation * 2 - noteVariation)
-        let noteIndex = fitNoteToScale(noteId, currentScaleIndex)
-        loop.push(noteAlwaysFlat(noteIndex, currentRootNoteIndex))
-    }
-    return loop
-}
-
-let playNote = (freq, timbre, envelope, noteLength, volume) => {
-    let t = audioCtx.currentTime
-
-    let osc = melodyTimbreData[timbre].oscillator(audioCtx)
-    osc.frequency.value = freq
-
-    let env = audioCtx.createGain()
-    env.connect(audioCtx.destination)
-    env.gain.cancelScheduledValues(t)
-    env.gain.setValueAtTime(0, t)
-
-    // attack
-    let attack = noteLength * envelope.attack
-    env.gain.linearRampToValueAtTime(volume, t + attack)
-
-    // decay
-    let decay = noteLength * envelope.decay
-    env.gain.linearRampToValueAtTime(envelope.sustain * volume, t + attack + decay)
-
-    // release
-    let release = envelope.release
-    env.gain.linearRampToValueAtTime(0, t + noteLength)
-
-    osc.connect(env)
-    osc.start()
-    osc.stop(t + noteLength + release)
-}
-
-let playTracks = () => {
-    let noteIds = tracks.map(() => 0)
-
-    let playNextNote = () => {
-        tracks.forEach((track, i) => {
-            if (noteIds[i] % track.division === 0) {
-                let loopId = Math.floor(noteIds[i] / track.division)
-                if (loopId >= track.melodyLength) {
-                    loopId = 0
-                    noteIds[i] = 0
-                    if (!track.state.freezeState && 
-                            (Math.random() < chanceForNewLoop * track.randomness)) {
-                        track.melody = randomLoop()
-                    }
-                }
-                if (track.state.playing) {
-                    let note = track.melody[loopId]
-                    let freq = frequencyFromNote(note + track.octave)
-                    let volume = track.state.volume / track.octave
-                    playNote(freq, track.state.timbre, track.envelope, track.division * 0.125, volume)
-                }
-            }
-            noteIds[i]++
-        })
-       
-        setTimeout(playNextNote, 1000 / 8)
-    }
-
-    playNextNote()
-}
-
-let renderInstrumentSVG = (envelope, color) => {
-    let attackX = envelope.attack * 100
-    let attackPt = `${attackX},0`
-
-    let decayX = attackX + envelope.decay * 100
-    let sustainY = 100 - envelope.sustain * 100
-    let decayPt = `${decayX},${sustainY}`
-
-    let sustainPt = `100,${sustainY}`
-
-    let releaseX = 100 + envelope.release * 100
-    let releasePt = `${releaseX},100`
-
-    return `
-    <svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
-        <polyline points="0,100 ${attackPt} ${decayPt} ${sustainPt} ${releasePt}" stroke="none" fill="${color}" />
-    </svg>
-    `
-}
+import { mapMidiNotes } from './12-tone-system-symbols';
+import { HEPTATONIC_SCALE } from './12-tone-scales';
+import { MelodyTrack, Track, } from './model';
+import { allMidiFrequenciesIndexed } from './midi-frequencies';
+import { degreeOctaveFrequencyLookup, makeAbsoluteNote } from './scale-degree-conversion';
+import { BEATS, OCTAVES, PATTERN_LENGTH, RANDOM_END, RANDOM_START, UserTimbreMode, VOLUMES } from './configuration';
+import { makeUniformRandomDegreeMelodyFactory, randomMelodyTrack } from './model-instance';
+import { BeepsterContext, MELODY_TRACK_TEMPLATE, RenderData, trackCollectionElement } from './layout';
+import { makeMelodyTrackAdvancer, makePlayNoteOscillator, startTracks } from './looper-engine';
+import { PeriodicWaveModule } from './periodic-waves';
 
 
-let renderEnvelopeElement = (data, trackId, onAction) => {
-    let result = document.createElement('button')
-    result.className = 'envelope-button'
-    let color
-    let colorIndex = trackId % 4
-    if (colorIndex === 0) color = '#ff7f50'
-    if (colorIndex === 1) color = '#ffd700'
-    if (colorIndex === 2) color = '#00fa9a'
-    if (colorIndex === 3) color = '#40e0d0'
-    result.innerHTML = renderInstrumentSVG(data, color)
-    result.addEventListener('click', () => {
-        onAction()
-        result.innerHTML = renderInstrumentSVG(tracks[trackId].envelope, color)
-    })
-    return result
-}
 
-let renderTimbreElement = (trackReference, timbreIndex, timbres, onAction) => {
-    let result = document.createElement('button')
-    result.textContent = timbres[timbreIndex].icon
-    result.addEventListener('click', () => {
-        onAction()
-        result.textContent = timbres[trackReference.state.timbre].icon
-    })
-    return result
-}
-
-let renderSlider = (value, sliderSettings, label, onChange) => {
-    let result = document.createElement('div')
-    let labelEl = document.createElement('div')
-    labelEl.innerText = label
-    result.appendChild(labelEl)
-    let slider = document.createElement('input')
-    slider.type = 'range'
-    slider.min = sliderSettings.min
-    slider.max = sliderSettings.max
-    slider.step = sliderSettings.step
-    slider.value = value
-    slider.addEventListener('change', e => 
-        onChange(e.target.value))
-    result.appendChild(slider)
-    return result
-}
-let renderCheckbox = (state, label, onChange) => {
-    let container = document.createElement('div')
-    let labelEl = document.createElement('div')
-    labelEl.innerText = label
-    container.appendChild(labelEl)
-    let checkBox = document.createElement('input')
-    checkBox.type = 'checkbox'
-    checkBox.checked = state
-    checkBox.addEventListener('change', onChange)
-    container.appendChild(checkBox)
-    return container
-}
-
-let renderButton = (text, onAction) => {
-    let button = document.createElement('button')
-    button.innerHTML = text
-    button.addEventListener('click', onAction)
-    return button
-}
-
-let renderDropdown = (selected, values, labels) => {
-    let select = document.createElement('select')
-    values.forEach((value, i) => {
-        let option = document.createElement('option')
-        option.innerText = labels ? labels[i] : value
-        option.value = value
-        if (value === selected) option.selected = 'selected'
-        select.appendChild(option)
-    })
-    return select
-}
-
-let renderModifier = (label, value, valueList, onChange) => {
-    let container = document.createElement('div')
-    container.className = 'modifier'
-
-    let index = valueList.findIndex(x => x === value)
-
-    let labelEl = document.createElement('div')
-    labelEl.innerText = label
-    container.appendChild(labelEl)
-
-    let valueContainer = document.createElement('div')
-    container.appendChild(valueContainer)
-    
-    let prevButton = document.createElement('button')
-    prevButton.innerText = '↙'
-    prevButton.addEventListener('click', () => {
-        index--
-        if (index < 0) index = 0
-        onChange(valueList[index])
-        valueEl.innerText = index + 1
-    })
-    valueContainer.appendChild(prevButton)
-
-    let valueEl = document.createElement('div')
-    valueEl.innerHTML = index + 1
-    valueContainer.appendChild(valueEl)
-
-    let nextButton = document.createElement('button')
-    nextButton.innerText = '↗'
-    nextButton.addEventListener('click', () => {
-        index++
-        if (index >= valueList.length) index = valueList.length - 1
-        onChange(valueList[index])
-        valueEl.innerText = index + 1
-    })
-    valueContainer.appendChild(nextButton)
-
-    return container
-}
-
-let renderModifierValueDisplay = (label, value, valueList, onChange) => {
-    let container = document.createElement('div')
-    container.className = 'modifier'
-
-    let index = valueList.findIndex(x => x === value)
-
-    let labelEl = document.createElement('div')
-    labelEl.innerText = label
-    container.appendChild(labelEl)
-
-    let valueContainer = document.createElement('div')
-    container.appendChild(valueContainer)
-    
-    let prevButton = document.createElement('button')
-    prevButton.innerText = '↙'
-    prevButton.addEventListener('click', () => {
-        index--
-        if (index < 0) index = 0
-        onChange(valueList[index])
-        valueEl.innerText = valueList[index]
-    })
-    valueContainer.appendChild(prevButton)
-
-    let valueEl = document.createElement('div')
-    valueEl.innerHTML = valueList[index]
-    valueContainer.appendChild(valueEl)
-
-    let nextButton = document.createElement('button')
-    nextButton.innerText = '↗'
-    nextButton.addEventListener('click', () => {
-        index++
-        if (index >= valueList.length) index = valueList.length - 1
-        onChange(valueList[index])
-        valueEl.innerText = valueList[index]
-    })
-    valueContainer.appendChild(nextButton)
-
-    return container
-}
-
-const MELODY_TRACK_TEMPLATE = [
-    {
-        id: "playing", render: (track) => 
-            renderCheckbox(track.state.playing, "", 
-                e => track.state.playing = e.target.checked)
-    },
-    {
-        id: "wave", render: (track) => 
-            renderTimbreElement(track, track.state.timbre, melodyTimbreData, 
-                () => track.state.timbre = (track.state.timbre + 1) % melodyTimbreData.length)
-    },
-    {
-        id: "envelope", render: (track, trackId) => 
-            renderEnvelopeElement(track.envelope, trackId, 
-                () => track.envelope = randomEnvelope())
-    },
-    {
-        id: "speed", render: (track) => 
-            renderModifier("Speed", track.division, BEATS,
-                value => track.division = value)
-    },
-    {
-        id: "volume", render: (track) => 
-            renderModifier("Volume", track.state.volume, VOLUMES,
-                value => track.state.volume = value)
-    },
-    {
-        id: "octave", render: (track) => 
-            renderModifier("Octave", track.octave, OCTAVES,
-                value => track.octave = value)
-    },
-    {
-        id: "loop_length", render: (track) => 
-            renderModifierValueDisplay("Notes", track.melodyLength, PATTERN_LENGTH,
-            value => track.melodyLength = value)
-    },
-    {
-        id: "randomness", render: (track) => 
-            renderSlider(track.randomness, 
-                {min: RANDOM_START, max: RANDOM_END, step: 0.01},
-                "Randomness", 
-                (newValue) => track.randomness = newValue)
-    },
-    {
-        id: "freeze_loop", render: (track) => 
-            renderCheckbox(track.state.playing, "", 
-            e => track.state.freezeState = e.target.checked)
-    },
-    {
-        id: "new_loop", render: (track) => 
-            renderButton("%", {})
-    },
-    {
-        id: "randomize", render: (track) => 
-            renderButton("⟳", () => {
-                let newTrack = randomMelodyTrack(randomLoop)
-                track.state.timbre = newTrack.state.timbre
-                track.state.volume = newTrack.state.volume
-                track.envelope = newTrack.envelope
-                track.octave = newTrack.octave
-                track.division = newTrack.division
-                track.melodyLength = newTrack.melodyLength
-                track.melody = newTrack.melody
-                track.randomness = newTrack.randomness
-            })
-    }
-];
-
-
-function renderMelodyTrack(data, index) {
-    let result = document.createElement('div')
-    result.className = 'track'
-    MELODY_TRACK_TEMPLATE.forEach((elementTemplate) => {
-        result.appendChild(
-            elementTemplate.render(data, index)
-        )
-    })
-    return result
-}
-
-function renderTracks(melodyTracks) {
-    let trackList = document.getElementById('tracks')
-    trackList.innerHTML = ''
-    melodyTracks.forEach((track, trackId) => {
-        let trackEl = renderMelodyTrack(track, trackId)
-        trackList.appendChild(trackEl)
-    })
-}
-
+/*
 let updateScale = (newScale) => {
     if (typeof newScale !== 'string') {
         if (currentScale === 'minor-pentatonic') currentScale = 'major-pentatonic'
@@ -383,70 +36,111 @@ function makeScaleHandler(scales, scaleDisplayUpdate) {
         scaleDisplayUpdate(scales[currentScaleIndex].name);
     };
 }
-let updateShareUrl = () => {
-    let shareLink = document.getElementById('share')
-    shareLink.href = getUrlData()
-}
+*/
+
+/**
+ * HTML hooks and driver code:
+ * 
+ * 
+ */
 
 window.onload = () => {
-    let startButton = document.getElementById('start-button')
-    startButton.addEventListener('click', () => {
-        AudioContext = window.AudioContext || window.webkitAudioContext
-        audioCtx = new AudioContext()
-        initializeFrequenies()
-        initializeOscillatorPatterns(audioCtx)
-        melodyTimbreData.push({
-            name: "Sine", icon: 's',
-            oscillator: sineOscillator
-        });
-        melodyTimbreData.push({
-            name: "Triangle", icon: '^',
-            oscillator: triangleOscillator
-        });
-        melodyTimbreData.push({
-            name: "Sawtooth", icon: 'N',
-            oscillator: sawtoothOscillator
-        });
-        melodyTimbreData.push({
-            name: "Square-50", icon: '[',
-            oscillator: square50Oscillator
-        });
-        melodyTimbreData.push({
-            name: "Square-25", icon: 'H',
-            oscillator: square25Oscillator
-        });
-        melodyTimbreData.push({
-            name: "Square-12.5", icon: '|',
-            oscillator: square12Oscillator
-        });
-        melodyTimbreData.push({
-            name: "Capped sine", icon: 'b',
-            oscillator: cappedSineOscillator
-        });
-        melodyTimbreData.push({
-            name: "Folded sine", icon: '{',
-            oscillator: foldedSineOscillator
-        });
-        let numberOfTracks = parseInt(document.getElementById('melody-counter').value)
-        tracks = Array(numberOfTracks).fill(0).map(() => randomMelodyTrack(
-            Math.floor(Math.random() * melodyTimbreData.length),
-            8,
-            0.5,
-            randomLoop
-        ))
+    // App variables:
+    let tracks: Array<MelodyTrack>
+    
 
-        let scaleButton = document.getElementById('scale-button')
-        scaleButton.innerText = 'minor pentatonic scale'
+
+    let startButton = document.getElementById('start-button')!;
+    startButton.addEventListener('click', () => {
+        AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        const audioCtx = new AudioContext();
+        const allowedFrequencies = allMidiFrequenciesIndexed();
+        const noteFrequencyLookup: ReadonlyMap<string, number> = mapMidiNotes(
+            new Map<number, number>(
+                allowedFrequencies.map(
+                    (num, index) => [index, num])
+        ));
+        const getBPM = () => 120;
+        const frequencyLookupMap = new Map(
+            HEPTATONIC_SCALE.map((scale) => [scale, 
+                degreeOctaveFrequencyLookup(
+                    scale.indices, 0, 10,
+                    makeAbsoluteNote(()=>12),
+                    allowedFrequencies
+                )]
+            ));
+        const currentScale = () => {return HEPTATONIC_SCALE[0]};
+        const scaleDegreeNoteFrequency = (degree: number, octave: number) => {
+            return frequencyLookupMap.get(currentScale())![degree][octave];
+        }
+        const periodicOscs = new PeriodicWaveModule(audioCtx);
+        const SINE_TIMBRE = new UserTimbreMode("Sine", 's', periodicOscs.sineOscillator);
+        const TRIANGLE_TIMBRE = new UserTimbreMode("Triangle", '^', periodicOscs.triangleOscillator);
+        const SAWTOOTH_TIMBRE = new UserTimbreMode("Sawtooth", 'z', periodicOscs.sawtoothOscillator);
+        const SQUARE_TIMBRE = new UserTimbreMode("Square-50", '[', periodicOscs.square50Oscillator);
+        const PULSE_TIMBRE = new UserTimbreMode("Square-25", 'H', periodicOscs.square25Oscillator);
+        const HALFPULSE_TIMBRE = new UserTimbreMode("Square-12.5", '|', periodicOscs.square12Oscillator);
+        const CAPPED_SINE_TIMBRE = new UserTimbreMode("Sine", 'b', periodicOscs.cappedSineOscillator);
+        const FOLDED_SINE_TIMBRE = new UserTimbreMode("Folded sine", '{', periodicOscs.foldedSineOscillator);
+        const MELODY_TRACK_TIMBRES = [
+            SINE_TIMBRE,
+            TRIANGLE_TIMBRE,
+            SAWTOOTH_TIMBRE,
+            SQUARE_TIMBRE,
+            PULSE_TIMBRE ,
+            HALFPULSE_TIMBRE ,
+            CAPPED_SINE_TIMBRE,
+            FOLDED_SINE_TIMBRE
+        ];
+        let config = new BeepsterContext(
+        MELODY_TRACK_TIMBRES, PATTERN_LENGTH, BEATS,
+        VOLUMES, OCTAVES, {start: RANDOM_START, end: RANDOM_END}
+    );
+        const randomTimbre = () => Math.floor(Math.random() * MELODY_TRACK_TIMBRES.length);
+        const randomLoop = makeUniformRandomDegreeMelodyFactory(
+            () => 5, () => 1
+        );
+        const newMelodyTrack = () => {
+            return randomMelodyTrack(
+                randomTimbre(), 8, 0.5, randomLoop
+            );
+        };
+
+
+        let melodyInput:HTMLInputElement = document.getElementById('melody-counter') as HTMLInputElement;
+        let numberOfTracks = parseInt(melodyInput.value);
+        tracks = Array(numberOfTracks).fill(0).map(() => newMelodyTrack());
+
+        // TODO
+        /*
+        let scaleButton = document.getElementById('scale-button') as HTMLButtonElement;
+        scaleButton.innerText = 'minor pentatonic scale' 
         scaleButton.addEventListener('click', makeScaleHandler(
-            HEPTATONIC_SCALE, (text) => {
+            HEPTATONIC_SCALE, (text: string) => {
                 scaleButton.innerText = text
             }
         ))
-
-
-        renderTracks(tracks)
-        playTracks()
-        document.getElementById('start-screen').className = 'hidden'
-        document.getElementById('play-screen').className = ''
+        */
+        let trackList = document.getElementById('tracks');
+        
+        trackList!.replaceWith(trackCollectionElement<MelodyTrack>(
+            tracks, 'track', MELODY_TRACK_TEMPLATE,
+            (track: Track, index: number, template) => {
+                return template.render( config, () => {return tracks[index]},
+                    new RenderData<MelodyTrack>(newMelodyTrack, index)
+                );
+            }
+        ));
+        trackList!.id = 'tracks';
+        startTracks(tracks, getBPM, 
+            makeMelodyTrackAdvancer(
+                scaleDegreeNoteFrequency,
+                makePlayNoteOscillator(audioCtx, MELODY_TRACK_TIMBRES),
+                randomLoop,
+                0.5
+            )
+        );
+        document.getElementById('start-screen')!.className = 'hidden'
+        document.getElementById('play-screen')!.className = ''
     })
 }

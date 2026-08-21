@@ -1,6 +1,6 @@
 
 // root not included, always 0
-const HEPTATONIC_SCALE = [
+export const HEPTATONIC_SCALE = [
     {
         name: "Minor pentatonic",
         steps: [],
@@ -34,6 +34,7 @@ const HEPTATONIC_SCALE = [
     }
 ];
 
+/*
 function fitNoteToScale(noteIndex, scaleIndex) {
     let scaleSize = 5;
     let inScaleNote = 0
@@ -47,3 +48,4 @@ function fitNoteToScale(noteIndex, scaleIndex) {
     return (inScaleNote === 0)? 0: 
         HEPTATONIC_SCALE[scaleIndex].indices[inScaleNote - 1];
 }
+*/

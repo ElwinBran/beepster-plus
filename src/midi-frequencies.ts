@@ -1,8 +1,5 @@
-let frequencyMapping = {};
-
-function frequencyFromNote(note) {
-    return frequencyMapping[note];
-}
+export const BASE_FREQUENCY = 440;
+export const BASE_KEY_INDEX = 69;
 
 /*
 The MIT License (MIT)
@@ -29,15 +26,14 @@ THE SOFTWARE.
 */
 // Substantial code copied from git repo to generate note frequencies
 
-function initializeFrequenies() {
+export function allMidiFrequenciesIndexed(): Array<number> {
+    let result: number[] = [];
     for (let octave = 0; octave < 10; octave++) {
         for (let step = 0; step < 12; step++) {
             let keyNumber = step + (octave * 12);
-            let floatFreq = parseFloat((440 * Math.pow(2, (keyNumber - 57) / 12)), 10);
-            let resultFrequency = parseFloat(floatFreq.toFixed(2), 10);
-            noteBoth(step).forEach(baseSymbol => {
-                frequencyMapping[baseSymbol + octave] = resultFrequency;
-            });
+            let floatFreq = BASE_FREQUENCY * Math.pow(2, (keyNumber - BASE_KEY_INDEX) / 12);
+            result.push(parseFloat(floatFreq.toFixed(2)));
         }
     }
+    return result;
 }
