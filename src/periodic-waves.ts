@@ -1,16 +1,16 @@
 
 export class PeriodicWaveModule {
 
-    #squareWave12: PeriodicWave;
-    #squareWave25: PeriodicWave;
-    #cappedSineWave: PeriodicWave;
-    #foldedSineWave: PeriodicWave;
+    squareWave12: PeriodicWave;
+    squareWave25: PeriodicWave;
+    cappedSineWave: PeriodicWave;
+    foldedSineWave: PeriodicWave;
 
     constructor(audioContext: AudioContext) {
-        this.#squareWave12 = periodicSquareDutyWave(audioContext, 12.5 / 100);
-        this.#squareWave25 = periodicSquareDutyWave(audioContext, 25 / 100);
-        this.#cappedSineWave = wavetableToPeriodicWave(audioContext, asymmetricCappedSineWavetable());
-        this.#foldedSineWave = wavetableToPeriodicWave(audioContext, sineFoldWavetable(30));
+        this.squareWave12 = periodicSquareDutyWave(audioContext, 12.5 / 100);
+        this.squareWave25 = periodicSquareDutyWave(audioContext, 25 / 100);
+        this.cappedSineWave = wavetableToPeriodicWave(audioContext, asymmetricCappedSineWavetable());
+        this.foldedSineWave = wavetableToPeriodicWave(audioContext, sineFoldWavetable(30));
     }
 
     sineOscillator(audioContext: AudioContext) {
@@ -29,27 +29,31 @@ export class PeriodicWaveModule {
         return new OscillatorNode(audioContext, {type: "square"});
     }
 
-    square25Oscillator(audioContext: AudioContext) {
+    square25Oscillator = (audioContext: AudioContext) => {
+        let target = this.squareWave25;
         return new OscillatorNode(audioContext, {
-            type: "custom", periodicWave: this.#squareWave25
+            type: "custom", periodicWave: target
         });
     }
 
-    square12Oscillator(audioContext: AudioContext) {
+    square12Oscillator = (audioContext: AudioContext) => {
+        let target = this.squareWave12;
         return new OscillatorNode(audioContext, {
-            type: "custom", periodicWave: this.#squareWave12
+            type: "custom", periodicWave: target
         });
     }
 
-    cappedSineOscillator(audioContext: AudioContext) {
+    cappedSineOscillator = (audioContext: AudioContext) => {
+        let target = this.cappedSineWave;
         return new OscillatorNode(audioContext, {
-            type: "custom", periodicWave: this.#cappedSineWave
+            type: "custom", periodicWave: target
         });
     }
 
-    foldedSineOscillator(audioContext: AudioContext) {
+    foldedSineOscillator = (audioContext: AudioContext) => {
+        let target = this.foldedSineWave
         return new OscillatorNode(audioContext, {
-            type: "custom", periodicWave: this.#foldedSineWave
+            type: "custom", periodicWave: target
         });
     }
 }
