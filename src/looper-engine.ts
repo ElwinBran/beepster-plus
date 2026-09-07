@@ -16,28 +16,29 @@ export function makePlayNoteOscillator(
 ): PlayNoteOscillator {
     return (frequency: number, timbreIndex: number, 
             envelope: ADSREnvelope, noteLength: number, volume: number) => {
-        
         let t = audioContext.currentTime;
         let osc = timbreTable[timbreIndex].oscillator(audioContext);
         osc.frequency.value = frequency;
         let env = audioContext.createGain();
         env.connect(audioContext.destination);
-        env.gain.cancelScheduledValues(t)
-        env.gain.setValueAtTime(0, t)
-        let attack = noteLength * envelope.attack
+        env.gain.cancelScheduledValues(t);
+        env.gain.setValueAtTime(0, t);
+        let attack = noteLength * envelope.attack;
         env.gain.linearRampToValueAtTime(volume, t + attack)
-        let decay = noteLength * envelope.decay
+        let decay = noteLength * envelope.decay;
         env.gain.linearRampToValueAtTime(envelope.sustain * volume, t + attack + decay)
-        let release = envelope.release
         env.gain.linearRampToValueAtTime(0, t + noteLength)
         osc.connect(env)
         osc.start()
-        osc.stop(t + noteLength + release)
+        osc.stop(t + noteLength + envelope.release)
     };
 }
 
-export type TrackAdvanceAction<T extends Track> = (track: T, position: number, 
-                                            setPosition: (newValue: number) => any) => any
+export type TrackAdvanceAction<T extends Track> = (
+        track: T, 
+        position: number, 
+        duration: number,
+        setPosition: (newValue: number) => any) => any
 
 export function makeMelodyTrackAdvancer(
     correspondingFrequency: (note: number, octave: number) => number,
@@ -45,7 +46,7 @@ export function makeMelodyTrackAdvancer(
     randomLoop: () => Array<number>,
     randomThreshold: number
 ): TrackAdvanceAction<MelodyTrack> {
-    return (track: MelodyTrack, currentPosition: number, 
+    return (track: MelodyTrack, currentPosition: number, duration:number, 
                       setPosition: (newValue: number) => any) => {
         if (currentPosition % track.beatDivision === 0) {
             let loopId = Math.floor(currentPosition / track.beatDivision)
@@ -61,7 +62,7 @@ export function makeMelodyTrackAdvancer(
                 let note = track.melody[loopId]
                 let freq = correspondingFrequency(note, track.octave);
                 let volume = track.state.volume / track.octave
-                playNote(freq, track.state.timbre, track.envelope, track.beatDivision * 0.125, volume)
+                playNote(freq, track.state.timbre, track.envelope, track.beatDivision * (duration / 1000), volume)
             }
         }
         setPosition(currentPosition + 1);
@@ -71,14 +72,14 @@ export function makeMelodyTrackAdvancer(
 export function startTracks<T extends Track>(tracks: Array<T>, getCurrentBPM: () => number,
                             advance: TrackAdvanceAction<T>) {
     let trackPosition = tracks.map(() => 0)
-    // make an array of setter functions
     let play = () => {
+        const interval = (60 / getCurrentBPM()) * 1000; // MilliSeconds
         tracks.forEach((track, index) => {
-            advance(track, trackPosition[index], 
+            advance(track, trackPosition[index], interval,
                 (newValue: number) => {trackPosition[index] = newValue;}
             )
-        })
-        setTimeout(play, 60 / getCurrentBPM() * 1000);
+        });
+        setTimeout(play, interval);
     }
     play();
 }

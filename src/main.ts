@@ -60,7 +60,7 @@ window.onload = () => {
                 allowedFrequencies.map(
                     (num, index) => [index, num])
         ));
-        const getBPM = () => 120;
+        const getBPM = () => 480;
         const frequencyLookupMap = new Map(
             HEPTATONIC_SCALE.map((scale) => [scale, 
                 degreeOctaveFrequencyLookup(
